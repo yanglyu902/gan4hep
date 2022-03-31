@@ -37,8 +37,8 @@ def view_particle_4vec(particles, axs=None, labels=None, outname=None, **kwargs)
 
     if axs is None or len(axs) != 4:
         fig, axs = plt.subplots(2,2, figsize=(10,10))
-        axs = axs.flatten()
-    
+        # axs = axs.flatten()
+
     for idx in range(4):
         array2hist(particles[:, idx], axs[idx], **kwargs)
         axs[idx].set_xlabel(labels[idx])
@@ -88,7 +88,8 @@ def compare(predictions, truths, outname, xlabels,
 
     _, axs = plt.subplots(nrows, ncols,
         figsize=(4*ncols, 4*nrows), constrained_layout=True)
-    axs = axs.flatten()
+    # axs = axs.flatten()
+    axs = [axs] # NOTE: just 1 dim, so make it a list to avoid further bug
 
     config = dict(histtype='step', lw=2, density=True)
     for idx in range(num_variables):
@@ -96,9 +97,12 @@ def compare(predictions, truths, outname, xlabels,
         xbin = xbins[idx] if xbins else 40
 
         ax = axs[idx]
-        yvals, _, _ = ax.hist(truths[:, idx], bins=xbin, range=xrange, label='Truth', **config)
-        max_y = np.max(yvals) * 1.1
-        ax.hist(predictions[:, idx], bins=xbin, range=xrange, label='Generator', **config)
+
+        print('truths for plotting: ', truths[:, idx])
+        print('predictions for plotting:', predictions[:, idx])
+        yvals, _, _ = ax.hist(truths[:, idx], bins=np.linspace(0, 75, 20), label='Truth', **config)
+        # max_y = np.max(yvals) * 1.1
+        # ax.hist(predictions[:, idx], bins=xbin, label='Generator', **config)
         ax.set_xlabel(r"{}".format(xlabels[idx]))
         ax.set_ylim(0, max_y)
         ax.legend()

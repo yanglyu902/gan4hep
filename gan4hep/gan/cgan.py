@@ -6,7 +6,6 @@ given to the discriminator.
 import numpy as np
 import os
 
-
 import tensorflow as tf
 from tensorflow.compat.v1 import logging
 logging.info("TF Version:{}".format(tf.__version__))
@@ -35,7 +34,7 @@ def generator_loss(fake_output):
 
 class CGAN():
     def __init__(self,
-        noise_dim: int = 4, gen_output_dim: int = 2,
+        noise_dim: int = 4, gen_output_dim: int = 1,
         cond_dim: int = 4, disable_tqdm=False, lr=0.0001):
         """
         noise_dim: dimension of the noises
@@ -100,7 +99,7 @@ class CGAN():
         return model
 
 
-    def train(self, train_truth, epochs, batch_size, test_truth, log_dir, evaluate_samples_fn,
+    def train(self, train_truth, epochs, batch_size, test_truth, log_dir, evaluate_samples_fn, xlabels,
         train_in=None, test_in=None):
         # ======================================
         # construct testing data once for all
@@ -139,6 +138,7 @@ class CGAN():
                 # =============================================================    
                 # add the conditional inputs to generated and truth information
                 # =============================================================
+                # print(cond_in.shape, gen_out_4vec.shape, truth_4vec.shape)
                 gen_out_4vec = tf.concat([cond_in, gen_out_4vec], axis=-1)
                 truth_4vec = tf.concat([cond_in, truth_4vec], axis=-1)
 
@@ -180,7 +180,7 @@ class CGAN():
                 avg_loss = np.sum(tot_loss, axis=0)/tot_loss.shape[0]
                 loss_dict = dict(D_loss=avg_loss[0], G_loss=avg_loss[1])
 
-                tot_wdis = evaluate_samples_fn(self.generator, epoch, testing_data, summary_writer, img_dir, **loss_dict)
+                tot_wdis = evaluate_samples_fn(self.generator, epoch, testing_data, summary_writer, img_dir, xlabels, **loss_dict)
                 if tot_wdis < best_wdis:
                     ckpt_manager.save()
                     self.generator.save("generator")
@@ -194,34 +194,68 @@ class CGAN():
             f.write(tmp_res + "\n")
 
 
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Train The GAN')
     add_arg = parser.add_argument
     add_arg("filename", help='input filename', default=None)
-    add_arg("--epochs", help='number of maximum epochs', default=100, type=int)
-    add_arg("--log-dir", help='log directory', default='log_training')
+    add_arg("--epochs", help='number of maximum epochs', default=100, type=int) # NOTE: before was 100
+    add_arg("--log-dir", help='log directory', default='/global/homes/y/yanglyu/phys_290/gan4hep/gan4hep/logs/')
     add_arg("--num-test-evts", help='number of testing events', default=10000, type=int)
-    add_arg("--inference", help='perform inference only', action='store_true')
     add_arg("-v", '--verbose', help='tf logging verbosity', default='INFO',
         choices=['WARN', 'INFO', "ERROR", "FATAL", 'DEBUG'])
-    add_arg("--max-evts", help='Maximum number of events', type=int, default=None)
     add_arg("--batch-size", help='Batch size', type=int, default=512)
     args = parser.parse_args()
 
     logging.set_verbosity(args.verbose)
 
 
-    from gan4hep.utils_gan import generate_and_save_images
-    from gan4hep.preprocess import herwig_angles
-
-    train_in, train_truth, test_in, test_truth = herwig_angles(args.filename, args.max_evts)
-
+    from gan4hep.gan.utils import generate_and_save_images
+    from gan4hep.preprocess import read_geant4
+    
+    # format: (X_train, X_test, y_train, y_test, xlabels)
+    train_in, test_in, train_truth, test_truth, xlabels = read_geant4(args.filename)
+    # print(train_in[:10], test_in[:10], train_truth[:10], test_truth[:10])
     batch_size = args.batch_size
     gan = CGAN()
     gan.train(
         train_truth, args.epochs, batch_size,
         test_truth, args.log_dir,
         generate_and_save_images,
+        xlabels,
         train_in, test_in
     )
+
+
+# if __name__ == '__main__':
+#     import argparse
+#     parser = argparse.ArgumentParser(description='Train The GAN')
+#     add_arg = parser.add_argument
+#     add_arg("filename", help='input filename', default=None)
+#     add_arg("--epochs", help='number of maximum epochs', default=100, type=int)
+#     add_arg("--log-dir", help='log directory', default='log_training')
+#     add_arg("--num-test-evts", help='number of testing events', default=10000, type=int)
+#     add_arg("--inference", help='perform inference only', action='store_true')
+#     add_arg("-v", '--verbose', help='tf logging verbosity', default='INFO',
+#         choices=['WARN', 'INFO', "ERROR", "FATAL", 'DEBUG'])
+#     add_arg("--max-evts", help='Maximum number of events', type=int, default=None)
+#     add_arg("--batch-size", help='Batch size', type=int, default=512)
+#     args = parser.parse_args()
+
+#     logging.set_verbosity(args.verbose)
+
+
+#     from gan4hep.utils_gan import generate_and_save_images
+#     from gan4hep.preprocess import herwig_angles
+
+#     train_in, train_truth, test_in, test_truth = herwig_angles(args.filename, args.max_evts)
+
+#     batch_size = args.batch_size
+#     gan = CGAN()
+#     gan.train(
+#         train_truth, args.epochs, batch_size,
+#         test_truth, args.log_dir,
+#         generate_and_save_images,
+#         train_in, test_in
+#     )
