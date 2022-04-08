@@ -60,7 +60,7 @@ def compare_4vec(predicts, truths, labels=None, nbins=35, min_x=-0.5, max_x=3, *
         labels=labels, bins=nbins, range=(min_x, max_x), **hist_config, **kwargs)
 
 
-def compare(predictions, truths, outname, xlabels,
+def compare(predictions, truths, outname, xlabels, metric,
     xranges=None, xbins=None):
     """
     default xranges: [-1, 1]
@@ -98,13 +98,14 @@ def compare(predictions, truths, outname, xlabels,
 
         ax = axs[idx]
 
-        print('truths for plotting: ', truths[:, idx])
-        print('predictions for plotting:', predictions[:, idx])
-        yvals, _, _ = ax.hist(truths[:, idx], bins=np.linspace(0, 75, 20), label='Truth', **config)
-        # max_y = np.max(yvals) * 1.1
-        # ax.hist(predictions[:, idx], bins=xbin, label='Generator', **config)
+        # print('truths for plotting: ', truths[:, idx])
+        # print('predictions for plotting:', predictions[:, idx])
+        yvals, _, _ = ax.hist(truths[:, idx], bins=np.linspace(-1,1,20), label='Truth', **config)
+        max_y = np.max(yvals) * 1.1
+        ax.hist(predictions[:, idx], bins=np.linspace(-1,1,20), label='Generator', **config)
         ax.set_xlabel(r"{}".format(xlabels[idx]))
         ax.set_ylim(0, max_y)
+        ax.set_title(f'W dist = {np.round(metric, 4)}')
         ax.legend()
 
     plt.savefig(outname)

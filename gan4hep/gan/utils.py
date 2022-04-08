@@ -207,14 +207,17 @@ def generate_and_save_images(model, epoch, datasets, summary_writer, img_dir, xl
         test_input, test_truth = data
         predictions.append(model(test_input, training=False))
         truths.append(test_truth)
-
+    
     predictions = tf.concat(predictions, axis=0).numpy()
     truths = tf.concat(truths, axis=0).numpy()
-
+    # print(predictions, truths)
+    
     outname = os.path.join(img_dir, str(epoch))
-    compare(predictions, truths, outname, xlabels)
 
+    metric = -9999
     if summary_writer:
-        return log_metrics(summary_writer, predictions, truths, epoch, **kwargs)[0]
-    else:
-        return -9999.
+        metric = log_metrics(summary_writer, predictions, truths, epoch, **kwargs)[0] 
+
+    compare(predictions, truths, outname, xlabels, metric)
+
+    return metric
