@@ -1,5 +1,7 @@
 */logs
-*/generator/*
+**/generator
+*.pb
+*.index
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
