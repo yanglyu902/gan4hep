@@ -15,9 +15,9 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 from tensorflow import keras
-from gan import GAN
+# from gan import GAN
 # from aae import AAE
-# from cgan import CGAN
+from cgan import CGAN
 # from wgan import WGAN
 
 all_gans = ['GAN', "AAE", 'CGAN', 'WGAN']
@@ -89,6 +89,8 @@ def train(train_truth, test_truth, model, gen_lr, disc_lr, batch_size,
     def train_step(gen_in_4vec, truth_4vec):
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
             gen_out_4vec = generator(gen_in_4vec, training=True)
+            gen_out_4vec = tf.concat([model.cond_dim, gen_out_4vec], axis=-1) # add cond dim
+            truth_4vec = tf.concat([model.cond_dim, truth_4vec], axis=-1) # add cond dim
 
             real_output = discriminator(truth_4vec, training=True)
             fake_output = discriminator(gen_out_4vec, training=True)
@@ -108,6 +110,8 @@ def train(train_truth, test_truth, model, gen_lr, disc_lr, batch_size,
     def train_disc_only(gen_in_4vec, truth_4vec):
         with tf.GradientTape() as disc_tape:
             gen_out_4vec = generator(gen_in_4vec, training=False)
+            gen_out_4vec = tf.concat([model.cond_dim, gen_out_4vec], axis=-1) # add cond dim
+            truth_4vec = tf.concat([model.cond_dim, truth_4vec], axis=-1) # add cond dim
 
             real_output = discriminator(truth_4vec, training=True)
             fake_output = discriminator(gen_out_4vec, training=True)
@@ -228,42 +232,60 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Train The GAN')
     add_arg = parser.add_argument
-    add_arg("model", choices=all_gans, help='gan model')
-    add_arg("filename", help='input filename', default=None, nargs='+')
+    add_arg("model", choices=all_gans, default='CGAN', help='gan model')
+    # add_arg("filename", help='input filename', default=None, nargs='+')
+    add_arg("filename", help='input filename (csv file)', default=None)
     add_arg("--epochs", help='number of maximum epochs', default=100, type=int)
     add_arg("--log-dir", help='log directory', default='log_training')
-    add_arg("--num-test-evts", help='number of testing events', default=10000, type=int)
-    add_arg("--inference", help='perform inference only', action='store_true')
+    # add_arg("--num-test-evts", help='number of testing events', default=10000, type=int)
+    # add_arg("--inference", help='perform inference only', action='store_true')
     add_arg("-v", '--verbose', help='tf logging verbosity', default='INFO',
         choices=['WARN', 'INFO', "ERROR", "FATAL", 'DEBUG'])
-    add_arg("--max-evts", help='Maximum number of events', type=int, default=None)
-    add_arg("--batch-size", help='Batch size', type=int, default=512)
+    # add_arg("--max-evts", help='Maximum number of events', type=int, default=None)
+    add_arg("--batch-size", help='Batch size', type=int, default=64) # default: 512
     add_arg("--gen-lr", help='generator learning rate', type=float, default=0.0001)
     add_arg("--disc-lr", help='discriminator learning rate', type=float, default=0.0001)
-    add_arg("--data", default='herwig_angles',
-        choices=['herwig_angles', 'dimuon_inclusive', 'herwig_angles2'])
+    # add_arg("--data", default='herwig_angles',
+        # choices=['herwig_angles', 'dimuon_inclusive', 'herwig_angles2'])
 
     # model parameters
     add_arg("--noise-dim", type=int, default=4, help="noise dimension")
-    add_arg("--gen-output-dim", type=int, default=2, help='generator output dimension')
-    add_arg("--cond-dim", type=int, default=0, help='dimension of conditional input')
+    add_arg("--gen-output-dim", type=int, default=1, help='generator output dimension')
+    add_arg("--cond-dim", type=int, default=6, help='dimension of conditional input')
     add_arg("--disable-tqdm", action="store_true", help='disable tqdm')
 
     args = parser.parse_args()
 
     from tensorflow.compat.v1 import logging
+    from gan4hep.gan.utils import generate_and_save_images
+    from gan4hep.preprocess import read_geant4
     logging.set_verbosity(args.verbose)
 
     # prepare input data by calling those function implemented in 
-    # gan4hep.preprocess.
-    train_in, train_truth, test_in, test_truth, xlabels = eval(args.data)(
-        args.filename, max_evts=args.max_evts)
+    # gan4hep.preprocess.?
+    # train_in, train_truth, test_in, test_truth, xlabels = eval(args.data)(
+    #     args.filename, max_evts=args.max_evts)
+
+
+    train_in, test_in, train_truth, test_truth, xlabels, y_orig, y_train_orig, y_test_orig = read_geant4(args.filename)
+
+    # output to csv for later comparison plot
+    log_dir = '/global/homes/y/yanglyu/phys_290/gan4hep/gan4hep/logs/' + args.log_dir
+    os.mkdir(log_dir)
+    np.savetxt(log_dir + '/y_train.csv', train_truth)
+    np.savetxt(log_dir + '/y_test.csv', test_truth)
+    np.savetxt(log_dir + '/y_orig.csv', y_orig)
+    np.savetxt(log_dir + '/y_train_orig.csv', y_train_orig)
+    np.savetxt(log_dir + '/y_test_orig.csv', y_test_orig)
+
+
 
     batch_size = args.batch_size
-    gan = eval(args.model)(**vars(args))
-    if args.inference:
-        inference(gan, test_in, test_truth, args.log_dir, xlabels)
-    else:
-        train(train_truth, test_truth, gan, args.gen_lr, args.disc_lr,
-            batch_size, args.epochs, args.log_dir, xlabels, args.disable_tqdm,
-            train_in, test_in)
+    # gan = eval(args.model) #(**vars(args)) # NOTE: use CGAN for now
+    gan = CGAN()
+    # if args.inference:
+    #     inference(gan, test_in, test_truth, args.log_dir, xlabels)
+    # else:
+    train(train_truth, test_truth, gan, args.gen_lr, args.disc_lr,
+        batch_size, args.epochs, args.log_dir, xlabels, args.disable_tqdm,
+        train_in, test_in)

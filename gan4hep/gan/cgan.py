@@ -31,7 +31,6 @@ def discriminator_loss(real_output, fake_output):
 def generator_loss(fake_output):
     return tf.reduce_mean(cross_entropy(tf.ones_like(fake_output), fake_output))
 
-
 class CGAN():
     def __init__(self,
         noise_dim: int = 4, gen_output_dim: int = 1, # TODO: is noise dimension 1 or 4?
@@ -52,8 +51,17 @@ class CGAN():
         # ============
         # Optimizers
         # ============
-        self.generator_optimizer = keras.optimizers.Adam(lr)
-        self.discriminator_optimizer = keras.optimizers.Adam(lr)
+
+        # TODO: use lr decay?
+        end_lr = 1e-6
+        gen_lr = 1e-5
+        disc_lr = 1e-2
+        max_epochs = 100
+        gen_lr = keras.optimizers.schedules.PolynomialDecay(gen_lr, max_epochs, end_lr, power=4)
+        disc_lr = keras.optimizers.schedules.PolynomialDecay(disc_lr, max_epochs, end_lr, power=1.0)
+
+        self.generator_optimizer = keras.optimizers.Adam(gen_lr) # default: lr
+        self.discriminator_optimizer = keras.optimizers.Adam(disc_lr) # default: lr
 
         # Build the critic
         self.discriminator = self.build_critic()
@@ -69,11 +77,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_input_dim,)),
-            layers.Dense(64), # TODO: original N_neural is 256 for all layers.
+            layers.Dense(32), # TODO: original N_neural is 256 for all layers.
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(64),
+            layers.Dense(32), # NOTE: generator too strong?
             layers.BatchNormalization(),
             
             layers.Dense(self.gen_output_dim),
@@ -86,11 +94,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_output_dim,)),
-            layers.Dense(64),
+            layers.Dense(16),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(64),
+            layers.Dense(16),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
 
@@ -160,8 +168,52 @@ class CGAN():
 
             return disc_loss, gen_loss
 
+        @tf.function # NOTE: myown
+        def train_step_generator(gen_in_4vec, cond_in, truth_4vec): # train generator and discriminator separately
+            with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+                gen_out_4vec = self.generator(gen_in_4vec, training=True)
+                gen_out_4vec = tf.concat([cond_in, gen_out_4vec], axis=-1)
+                truth_4vec = tf.concat([cond_in, truth_4vec], axis=-1)
+
+                real_output = self.discriminator(truth_4vec, training=False)
+                fake_output = self.discriminator(gen_out_4vec, training=False)
+
+                gen_loss = generator_loss(fake_output)
+                disc_loss = discriminator_loss(real_output, fake_output)
+
+            gradients_of_generator = gen_tape.gradient(gen_loss, self.generator.trainable_variables)
+            self.generator_optimizer.apply_gradients(zip(gradients_of_generator, self.generator.trainable_variables))
+
+            return disc_loss, gen_loss
+
+        @tf.function # NOTE: myown
+        def train_step_discriminator(gen_in_4vec, cond_in, truth_4vec): # train generator and discriminator separately
+            with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+                gen_out_4vec = self.generator(gen_in_4vec, training=False)
+                gen_out_4vec = tf.concat([cond_in, gen_out_4vec], axis=-1)
+                truth_4vec = tf.concat([cond_in, truth_4vec], axis=-1)
+
+                real_output = self.discriminator(truth_4vec, training=True)
+                fake_output = self.discriminator(gen_out_4vec, training=True)
+
+                gen_loss = generator_loss(fake_output)
+                disc_loss = discriminator_loss(real_output, fake_output)
+
+            gradients_of_discriminator = disc_tape.gradient(disc_loss, self.discriminator.trainable_variables)
+            self.discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, self.discriminator.trainable_variables))
+
+            return disc_loss, gen_loss
+
         best_wdis = 9999
         best_epoch = -1
+
+        plaeto_threashold = 100000
+        num_no_improve = 0
+        do_disc_only = False
+        num_disc_only_epochs = 0
+        i_disc_only = 0
+        losses_logfile = os.path.join(summary_dir, 'losses.txt')
+
         with tqdm.trange(epochs, disable=self.disable_tqdm) as t0:
             for epoch in t0:
 
@@ -173,10 +225,40 @@ class CGAN():
                 dataset = tf.data.Dataset.from_tensor_slices(
                     (train_inputs, train_in, train_truth)
                     ).shuffle(2*batch_size).batch(batch_size, drop_remainder=True).prefetch(AUTO)
-
+                
+                # NOTE: original training method 
+                # ''' 
                 tot_loss = []
                 for data_batch in dataset:
                     tot_loss.append(list(train_step(*data_batch)))
+                # '''
+
+                # NOTE: myown training method: train more discriminator, less generator
+                '''
+                tot_loss = []
+                n_cnt = 0
+                for data_batch in dataset:
+
+                    tot_loss.append(list(train_step_discriminator(*data_batch)))
+
+                    n_cnt += 1
+                    
+                    if n_cnt < 8: # train discriminator N times
+                        continue
+
+                    tot_loss.append(list(train_step(*data_batch)))
+                    n_cnt = 0
+                '''
+
+                # NOTE: another method:
+                '''
+                tot_loss = []
+                train_fn = train_step_discriminator if do_disc_only else train_step
+                # train_fn = train_step
+                i_disc_only += do_disc_only
+                for data_batch in dataset:
+                    tot_loss.append(list(train_fn(*data_batch)))
+                '''
 
                 tot_loss = np.array(tot_loss)
                 avg_loss = np.sum(tot_loss, axis=0)/tot_loss.shape[0]
@@ -188,12 +270,36 @@ class CGAN():
                     self.generator.save(log_dir + "/generator")
                     best_wdis = tot_wdis
                     best_epoch = epoch
+                else:
+                    num_no_improve += 1
+
                 t0.set_postfix(**loss_dict, BestD=best_wdis, BestE=best_epoch)
+                with open(losses_logfile, 'a') as f:
+                    f.write("{},{},{},{},{},{}\n".format(epoch, avg_loss[0], avg_loss[1], tot_wdis, best_wdis, best_epoch))
+
+                
+                # so long since last improvement
+                # train discriminator only
+                if num_no_improve > plaeto_threashold:
+                    num_no_improve = 0
+                    num_disc_only_epochs += 1
+                    do_disc_only = True
+                else:
+                    if i_disc_only == num_disc_only_epochs:
+                        do_disc_only = False
+                        i_disc_only = 0
+
+
+
+
+
         tmp_res = "Best Model in {} Epoch with a Wasserstein distance {:.4f}".format(best_epoch, best_wdis)
         logging.info(tmp_res)
         summary_logfile = os.path.join(summary_dir, 'results.txt')
+
         with open(summary_logfile, 'a') as f:
             f.write(tmp_res + "\n")
+        
 
 
 

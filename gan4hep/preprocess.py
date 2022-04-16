@@ -36,7 +36,8 @@ def read_geant4(filename, sep=" ", engine=None):
     y_orig = y.copy()
 
     # NOTE: normalize and standardize: scale features to [0, 1], and scale labels to [-1, 1]
-    X /= np.max(X, axis=0) # input in [0, 1]
+    # X /= np.max(X, axis=0) # input in [0, 1] # ALERT: really?? correlation between cols are missing!
+    X = (X.T / (X[:,0] + 139)).T # NOTE: 139 is the pion mass
     y = 2 * (y - np.min(y))/(np.max(y) - np.min(y)) - 1  # label in [-1, 1]
 
     # shuffle and split data
