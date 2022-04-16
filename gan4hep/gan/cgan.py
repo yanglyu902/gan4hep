@@ -55,13 +55,13 @@ class CGAN():
         # TODO: use lr decay?
         end_lr = 1e-6
         gen_lr = 1e-5
-        disc_lr = 1e-2
+        disc_lr = 1e-3
         max_epochs = 100
-        gen_lr = keras.optimizers.schedules.PolynomialDecay(gen_lr, max_epochs, end_lr, power=4)
-        disc_lr = keras.optimizers.schedules.PolynomialDecay(disc_lr, max_epochs, end_lr, power=1.0)
+        # gen_lr = keras.optimizers.schedules.PolynomialDecay(gen_lr, max_epochs, end_lr, power=4)
+        # disc_lr = keras.optimizers.schedules.PolynomialDecay(disc_lr, max_epochs, end_lr, power=1.0)
 
-        self.generator_optimizer = keras.optimizers.Adam(gen_lr) # default: lr
-        self.discriminator_optimizer = keras.optimizers.Adam(disc_lr) # default: lr
+        self.generator_optimizer = keras.optimizers.Adam(lr) # default: lr
+        self.discriminator_optimizer = keras.optimizers.Adam(lr) # default: lr
 
         # Build the critic
         self.discriminator = self.build_critic()
@@ -77,11 +77,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_input_dim,)),
-            layers.Dense(32), # TODO: original N_neural is 256 for all layers.
+            layers.Dense(64), # TODO: original N_neural is 256 for all layers.
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(32), # NOTE: generator too strong?
+            layers.Dense(64), # NOTE: generator too strong?
             layers.BatchNormalization(),
             
             layers.Dense(self.gen_output_dim),
@@ -94,11 +94,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_output_dim,)),
-            layers.Dense(16),
+            layers.Dense(32),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(16),
+            layers.Dense(32),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
 
@@ -324,21 +324,9 @@ if __name__ == '__main__':
     from gan4hep.preprocess import read_geant4
     
     # format: (X_train, X_test, y_train, y_test, xlabels)
-    train_in, test_in, train_truth, test_truth, xlabels, y_orig, y_train_orig, y_test_orig = read_geant4(args.filename)
-
-
-    # output to csv for later comparison plot
-    os.mkdir(log_dir)
-    np.savetxt(log_dir + '/y_train.csv', train_truth)
-    np.savetxt(log_dir + '/y_test.csv', test_truth)
-    np.savetxt(log_dir + '/y_orig.csv', y_orig)
-    np.savetxt(log_dir + '/y_train_orig.csv', y_train_orig)
-    np.savetxt(log_dir + '/y_test_orig.csv', y_test_orig)
-
-
+    train_in, test_in, train_truth, test_truth, xlabels = read_geant4(args.filename, log_dir)
 
     batch_size = args.batch_size
-    # print('reached here')
     gan = CGAN()
     gan.train(
         train_truth, args.epochs, batch_size,

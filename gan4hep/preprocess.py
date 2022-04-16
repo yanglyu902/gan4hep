@@ -26,18 +26,22 @@ def read_dataframe(filename, sep=",", engine=None):
     return df
    
 
-def read_geant4(filename, sep=" ", engine=None):
+def read_geant4(filename, log_dir):
+    PionMass = 139.570 # MeV
+
     filename = "/global/homes/y/yanglyu/phys_290/MCGenerators/G4/HadronicInteractions/build/" + filename + '.csv'
-    df = pd.read_csv(filename, sep=sep, usecols=[0,1,2,3,4,5], header=None) # 4 vector and num_secondary
+    df = pd.read_csv(filename, sep=' ', usecols=[0,1,2,3,4,5], header=None) # 4 vector and num_secondary
 
     data = df.to_numpy().astype(np.float32)
+    curr_material = data[:,0]
     X = data[:, 1:-1] # NOTE: which columns to use?
     y = data[:, -1]
     y_orig = y.copy()
 
     # NOTE: normalize and standardize: scale features to [0, 1], and scale labels to [-1, 1]
     # X /= np.max(X, axis=0) # input in [0, 1] # ALERT: really?? correlation between cols are missing!
-    X = (X.T / (X[:,0] + 139)).T # NOTE: 139 is the pion mass
+    # X = (X.T / (X[:,0] + 139)).T
+    X /= (np.max(X[:,0]) + PionMass)
     y = 2 * (y - np.min(y))/(np.max(y) - np.min(y)) - 1  # label in [-1, 1]
 
     # shuffle and split data
@@ -48,11 +52,11 @@ def read_geant4(filename, sep=" ", engine=None):
     
     X_train, y_train = X[train_ind], y[train_ind, None]
     X_test, y_test = X[test_ind], y[test_ind, None]
-    
+
     # one-hot encoding material info: 2 materials for now. 
     material = np.zeros((X.shape[0], 2), dtype=np.float32)
-    material[:,0] = 1 # if pion
-    # material[:,1] = 1 # if kaon
+    material[:,0] = (curr_material == -211).astype(np.float32)
+    material[:,1] = (curr_material == -321).astype(np.float32)
 
     X_train = np.concatenate((X_train, material[train_ind]), axis=1)
     X_test = np.concatenate((X_test, material[test_ind]), axis=1)
@@ -64,8 +68,15 @@ def read_geant4(filename, sep=" ", engine=None):
 
     xlabels = ['num_secondary']
 
+    # output to csv for later comparison plot
+    os.mkdir(log_dir)
+    np.savetxt(log_dir + '/y_train.csv', y[train_ind])
+    np.savetxt(log_dir + '/y_test.csv', y[test_ind])
+    np.savetxt(log_dir + '/y_orig.csv', y_orig)
+    np.savetxt(log_dir + '/y_train_orig.csv', y_orig[train_ind])
+    np.savetxt(log_dir + '/y_test_orig.csv', y_orig[test_ind])
 
-    return (X_train, X_test, y_train, y_test, xlabels, y_orig, y_orig[train_ind], y_orig[test_ind])
+    return (X_train, X_test, y_train, y_test, xlabels)
 
     
 

@@ -42,8 +42,8 @@ def generate(model_name=None, ngen=100):
 
     # particle
     PionMass = 139.570 # MeV
-    E_min = 25*1000 # GeV
-    E_max = 25.0*1000 # GeV
+    E_min = 20.0*1000 # GeV
+    E_max = 20.0*1000 # GeV
 
     x_particle = np.random.rand(ngen, 4)
     KE = E_min + x_particle[:,0] * (E_max - E_min)
@@ -53,7 +53,8 @@ def generate(model_name=None, ngen=100):
     x_particle[:,3] = np.sqrt(KE**2 + 2 * KE * PionMass) * 0.5291502622129182
 
     # x_particle = x_particle / np.max(x_particle, axis=0) # ALERT: careful!!!! could be wrong!!!
-    x_particle = (x_particle.T / (x_particle[:,0] + PionMass)).T # NOTE: 139 is the pion mass
+    # x_particle = (x_particle.T / (x_particle[:,0] + PionMass)).T # NOTE: 139 is the pion mass
+    x_particle /= (np.max(x_particle[:,0]) + PionMass)
 
 
 
@@ -205,4 +206,4 @@ if __name__=='__main__':
         generate(args.log_dir, args.ngen)
     compare(args.log_dir) # NOTE: slices or just one comparison?
 
-    generate_and_compare_slices(args.log_dir, args.ngen) # NOTE: slices or just one comparison?
+    # generate_and_compare_slices(args.log_dir, args.ngen) # NOTE: slices or just one comparison?
