@@ -19,26 +19,12 @@ def plot_losses(model_name=None):
     epoch, loss_D, loss_G, tot_wdis, best_wdis, best_epoch = np.loadtxt(LOSS_DIR, delimiter=',', unpack=True)
 
     plt.figure()
-    plt.plot(epoch, loss_D, '.-', label='Discriminator loss')
-    plt.legend()
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.savefig(FIG_DIR + '/d_loss.png', dpi=150)
-
-    plt.figure()
-    plt.plot(epoch, loss_G, '.-', label='Generator loss')
-    plt.legend()
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.savefig(FIG_DIR + '/g_loss.png', dpi=150)
-
-    plt.figure()
     plt.plot(epoch, loss_G, '.-', label='Generator loss')
     plt.plot(epoch, 0.5 * loss_D, '.-', label='Averaged Discriminator loss')
     plt.legend()
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.savefig(FIG_DIR + '/all_loss.png', dpi=150)
+    plt.savefig(FIG_DIR + '/losses.png', dpi=150)
 
     plt.figure()
     plt.plot(epoch, tot_wdis, '.-', label='Total Wasserstein distance')

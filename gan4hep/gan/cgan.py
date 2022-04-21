@@ -52,16 +52,20 @@ class CGAN():
         # Optimizers
         # ============
 
-        # TODO: use lr decay?
+        # NOTE: large gen_lr / small disc_lr lead to slower convergence (w-disc slowly descend to min). 
         end_lr = 1e-6
         gen_lr = 1e-5
-        disc_lr = 1e-3
+        disc_lr = 1e-2
         max_epochs = 100
+
         # gen_lr = keras.optimizers.schedules.PolynomialDecay(gen_lr, max_epochs, end_lr, power=4)
         # disc_lr = keras.optimizers.schedules.PolynomialDecay(disc_lr, max_epochs, end_lr, power=1.0)
 
-        self.generator_optimizer = keras.optimizers.Adam(lr) # default: lr
-        self.discriminator_optimizer = keras.optimizers.Adam(lr) # default: lr
+        gen_lr = lr
+        disc_lr = lr
+
+        self.generator_optimizer = keras.optimizers.Adam(gen_lr) # default: lr
+        self.discriminator_optimizer = keras.optimizers.Adam(gen_lr) # default: lr
 
         # Build the critic
         self.discriminator = self.build_critic()
@@ -310,10 +314,11 @@ if __name__ == '__main__':
     add_arg("filename", help='input filename (csv file)', default=None)
     add_arg("--epochs", help='number of maximum epochs', default=100, type=int) # TODO: before was 100
     add_arg("--log-dir", help='log directory') # TODO: must specify; use naming similar to the filename
+
     add_arg("--num-test-evts", help='number of testing events', default=10000, type=int)
     add_arg("-v", '--verbose', help='tf logging verbosity', default='INFO',
         choices=['WARN', 'INFO', "ERROR", "FATAL", 'DEBUG'])
-    add_arg("--batch-size", help='Batch size', type=int, default=64)
+    add_arg("--batch-size", help='Batch size', type=int, default=128)
     args = parser.parse_args()
 
     logging.set_verbosity(args.verbose)
