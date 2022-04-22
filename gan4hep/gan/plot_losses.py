@@ -28,7 +28,7 @@ def plot_losses(model_name=None):
 
     plt.figure()
     plt.plot(epoch, tot_wdis, '.-', label='Total Wasserstein distance')
-    plt.plot(epoch, best_wdis, '.-', label='Best Wasserstein distance')
+    plt.plot(epoch, best_wdis, '.-', label='Best Wasserstein distance: ' + str(np.round(best_wdis[-1], 5)))
     plt.legend()
     plt.xlabel('Epoch')
     plt.ylabel('Wasserstein distance')

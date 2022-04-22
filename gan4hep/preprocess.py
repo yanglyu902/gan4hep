@@ -41,7 +41,8 @@ def read_geant4(filename, log_dir):
     # normalize and standardize: scale features to [0, 1], and scale labels to [-1, 1]
     # X /= np.max(X, axis=0) # input in [0, 1] # ALERT: really?? correlation between cols are missing!
     # X = (X.T / (X[:,0] + 139)).T
-    X /= (np.max(X[:,0]) + PionMass)
+    KE_max = np.max(X[:,0])
+    X /= (KE_max + PionMass)
     y = 2 * (y - np.min(y))/(np.max(y) - np.min(y)) - 1  # label to [-1, 1]
 
     # shuffle and split data
@@ -74,6 +75,7 @@ def read_geant4(filename, log_dir):
     np.savetxt(log_dir + '/y_orig.csv', y_orig)
     np.savetxt(log_dir + '/y_train_orig.csv', y_orig[train_index])
     np.savetxt(log_dir + '/y_test_orig.csv', y_orig[test_index])
+    np.savetxt(log_dir + '/KE_max.csv', KE_max)
 
     # NOTE: the full GAN input should be [4_vector, material, random noise]
     return (X_train, X_test, y_train, y_test, xlabels)

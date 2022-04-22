@@ -55,7 +55,7 @@ class CGAN():
         # NOTE: large gen_lr / small disc_lr lead to slower convergence (w-disc slowly descend to min). 
         end_lr = 1e-6
         gen_lr = 1e-5
-        disc_lr = 1e-2
+        disc_lr = 1e-3
         max_epochs = 100
 
         # gen_lr = keras.optimizers.schedules.PolynomialDecay(gen_lr, max_epochs, end_lr, power=4)
@@ -81,11 +81,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_input_dim,)),
-            layers.Dense(64), # TODO: original N_neural is 256 for all layers.
+            layers.Dense(48), # TODO: original N_neural is 256 for all layers.
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(64), # NOTE: generator too strong?
+            layers.Dense(48), # NOTE: generator too strong?
             layers.BatchNormalization(),
             
             layers.Dense(self.gen_output_dim),
@@ -98,11 +98,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_output_dim,)),
-            layers.Dense(32),
+            layers.Dense(64),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(32),
+            layers.Dense(64),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
 
@@ -282,16 +282,16 @@ class CGAN():
                     f.write("{},{},{},{},{},{}\n".format(epoch, avg_loss[0], avg_loss[1], tot_wdis, best_wdis, best_epoch))
 
                 
-                # so long since last improvement
-                # train discriminator only
-                if num_no_improve > plaeto_threashold:
-                    num_no_improve = 0
-                    num_disc_only_epochs += 1
-                    do_disc_only = True
-                else:
-                    if i_disc_only == num_disc_only_epochs:
-                        do_disc_only = False
-                        i_disc_only = 0
+                # # so long since last improvement
+                # # train discriminator only
+                # if num_no_improve > plaeto_threashold:
+                #     num_no_improve = 0
+                #     num_disc_only_epochs += 1
+                #     do_disc_only = True
+                # else:
+                #     if i_disc_only == num_disc_only_epochs:
+                #         do_disc_only = False
+                #         i_disc_only = 0
 
 
 
