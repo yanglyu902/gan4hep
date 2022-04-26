@@ -90,6 +90,7 @@ def train(train_in, train_truth, test_in, testing_truth, flow_model, layers, lr,
 
     for i in range(max_epochs):
         for condition,batch in training_data:
+            print(condition.shape, batch.shape, layers, flow_model)
             train_loss = train_density_estimation_cond(
                 flow_model, opt, batch, condition, layers)
 
@@ -109,26 +110,39 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Normalizing Flow')
     add_arg = parser.add_argument
-    add_arg('filename', help='Herwig input filename')
-    add_arg("outdir", help='output directory')
+    add_arg("filename", help='input filename (csv file)', default=None)
+    add_arg("--log-dir", help='output directory')
     add_arg("--max-evts", default=-1, type=int, help="maximum number of events")
-    add_arg("--batch-size", type=int, default=512, help="batch size")
+    add_arg("--batch-size", type=int, default=512, help="batch size") # default: 512
     
     args = parser.parse_args()
 
-    from gan4hep.preprocess import herwig_angles
-    from made import create_conditional_flow
-    train_in, train_truth, test_in, test_truth = herwig_angles(
-        args.filename, max_evts=args.max_evts)
+    log_dir = '/global/homes/y/yanglyu/phys_290/gan4hep/gan4hep/nf/logs/' + args.log_dir
 
-    outdir = args.outdir
+    from made import create_conditional_flow
+    from gan4hep.gan.utils import generate_and_save_images
+    from gan4hep.preprocess import read_geant4
+    
+    # format: (X_train, X_test, y_train, y_test, xlabels)
+    train_in, test_in, train_truth, test_truth, xlabels = read_geant4(
+                                                        args.filename, log_dir)
+
+
+
+    outdir = args.log_dir
     hidden_shape = [128]*2
     layers = 10
     lr = 1e-3
     batch_size = args.batch_size
     max_epochs = 1000
-    conditional_event_shape=(4,)
+    conditional_event_shape=(6,)
 
-    maf =  create_conditional_flow(hidden_shape, layers, conditional_event_shape, out_dim=2)
+    maf =  create_conditional_flow(hidden_shape, 
+                                    layers, 
+                                    conditional_event_shape, 
+                                    out_dim=1)
 
-    train(train_in, train_truth, test_in, test_truth, maf, layers, lr, batch_size, max_epochs, outdir)
+    train(train_in, train_truth, 
+            test_in, test_truth, 
+            maf, layers, 
+            lr, batch_size, max_epochs, outdir)

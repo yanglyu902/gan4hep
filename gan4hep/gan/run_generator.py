@@ -21,19 +21,25 @@ def inverse_transform(gen, y_orig):
     output = 1/2 * (gen + 1) * (y_max - y_min) + y_min
     return output.astype(int)
 
+def str_to_float(x):
+    """
+    Example: '01' -> 0.1, '05' -> 0.5, '1' -> 1.0, '10' -> 10.0
+    """
+    if len(x) == 2 and x[0] == '0':
+        return float(x[1]) / 10
+    return x
 
-def create_X(ngen, elow, ehigh, emax=None):
+def create_X(ngen, elow, ehigh):
 
-    dim_cond = 4 # particle 4 vector
-    dim_material = 2 # FIXME: 1 and 0, not all ones.
+    dim_cond = 4 # particle info (KE, p1, p2, p3)
+    dim_material = 2 # Fe, Cu
     dim_noise = 4 # random noise
 
     """ 1. generate particle """
 
-    if elow == '05':
-        elow = 0.5
-    if ehigh == '05':
-        ehigh = 0.5
+    elow = str_to_float(elow)
+    ehigh = str_to_float(ehigh)
+
     E_min = float(elow) * 1000 # MeV
     E_max = float(ehigh) * 1000 # MeV
 
@@ -47,12 +53,14 @@ def create_X(ngen, elow, ehigh, emax=None):
     x_particle[:,2] = np.sqrt(KE**2 + 2 * KE * PionMass) * direction[1]
     x_particle[:,3] = np.sqrt(KE**2 + 2 * KE * PionMass) * direction[2]
 
-    # x_particle = x_particle / np.max(x_particle, axis=0) # ALERT: careful!!!! could be wrong!!!
-    # x_particle = (x_particle.T / (x_particle[:,0] + PionMass)).T # NOTE: 139 is the pion mass
-    if emax: # absolute max of training energy range
-        x_particle /= (emax + PionMass)
-    else:
-        x_particle /= (np.max(x_particle[:,0]) + PionMass)
+    try: # feature normalization factor saved or not?
+        KE_max = np.loadtxt(FIG_DIR + '/KE_max.csv')
+    except: # hope statistics is high enough
+        print(FIG_DIR + '/KE_max.csv NOT FOUND!!!')
+        KE_max = np.max(x_particle[:,0])
+
+    print('Normalizing features with KE_max = ', KE_max)
+    x_particle /= (KE_max + PionMass)
 
     """ 2. generate material """
 
@@ -89,14 +97,14 @@ def generate(model_name=None, ngen=100, elow=None, ehigh=None):
     return gen_orig
 
 
-def generate_and_compare_slices(model_name=None, ngen=10000):
+def generate_and_compare_slices(model_name=None, ngen=100000):
 
     model = tf.keras.models.load_model(GEN_DIR)
     y_orig = np.loadtxt(LOG_DIR + model_name + '/y_orig.csv')
 
-    for KE_curr in ['05', '1', '10', '15']: # GeV
+    for KE_curr in ['01', '05', '1', '5', '10', '15', '20', '30']: # GeV
 
-        X_gen = create_X(ngen, KE_curr, KE_curr, emax=15000)
+        X_gen = create_X(ngen, KE_curr, KE_curr)
         print('Example of generated features:')
         print(X_gen[:5])
 
@@ -165,9 +173,9 @@ if __name__=='__main__':
     add_arg = parser.add_argument
 
     add_arg("--log-dir", help='name of log folder', default=None)
-    add_arg("--ngen", default=None, type=int, help='if not None, generate sample!')
-    add_arg("--elow", default=None, type=str)
-    add_arg("--ehigh", default=None, type=str)
+    add_arg("--ngen", default=100000, type=int, help='if not None, generate sample!')
+    add_arg("--elow", default='05', type=str)
+    add_arg("--ehigh", default='15', type=str)
 
     args = parser.parse_args()
 
@@ -175,7 +183,7 @@ if __name__=='__main__':
     FIG_DIR = LOG_DIR + args.log_dir
     PionMass = 139.570 # MeV
 
-    gen_orig = generate(args.log_dir, args.ngen, args.elow, args.ehigh)
-    compare(gen_orig, args.log_dir, args.elow, args.ehigh)
+    # gen_orig = generate(args.log_dir, args.ngen, args.elow, args.ehigh)
+    # compare(gen_orig, args.log_dir, args.elow, args.ehigh)
 
     generate_and_compare_slices(args.log_dir, args.ngen)

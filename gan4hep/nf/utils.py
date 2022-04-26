@@ -35,8 +35,9 @@ def train_density_estimation_cond(distribution, optimizer, batch, condition, lay
         tape.watch(distribution.trainable_variables)
         loss = -tf.reduce_mean(
             distribution.log_prob(
-                batch, **cond_kwargs
-                # bijector_kwargs={'conditional_input': condition}
+                batch,
+                # batch, **cond_kwargs
+                bijector_kwargs={'conditional_input': condition}
                 ))
 
     gradients = tape.gradient(loss, distribution.trainable_variables)

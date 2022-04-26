@@ -44,7 +44,7 @@ class Made(tfk.layers.Layer):
         return shift, tf.math.tanh(log_scale)
 
 
-def create_flow(hidden_shape: list, layers: int, input_dim: int, out_dim: int=2):
+def create_flow(hidden_shape: list, layers: int, input_dim: int, out_dim: int=1):
     """Create Masked Autogressive Flow for density estimation
 
     Arguments:
@@ -77,7 +77,7 @@ def create_flow(hidden_shape: list, layers: int, input_dim: int, out_dim: int=2)
 def create_conditional_flow(
         hidden_shape: list, layers: int,
         conditional_event_shape: tuple,
-        out_dim=2):
+        out_dim=1):
     """Create Conditional Masked Autogressive Flow for density estimation
 
     Arguments:
@@ -95,6 +95,7 @@ def create_conditional_flow(
             shift_and_log_scale_fn=Made(
                 out_dim,
                 conditional=True,
+                event_shape=(5), # ALERT: add this line?
                 conditional_event_shape=conditional_event_shape,
                 hidden_units=hidden_shape, activation='relu'),
             name=f"b{i}"

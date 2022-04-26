@@ -31,6 +31,10 @@ def discriminator_loss(real_output, fake_output):
 def generator_loss(fake_output):
     return tf.reduce_mean(cross_entropy(tf.ones_like(fake_output), fake_output))
 
+def myprint(s):
+    with open(log_dir + '/model_summary.txt','a+') as f:
+        print(s, file=f)
+
 class CGAN():
     def __init__(self,
         noise_dim: int = 4, gen_output_dim: int = 1, # TODO: is noise dimension 1 or 4?
@@ -55,25 +59,25 @@ class CGAN():
         # NOTE: large gen_lr / small disc_lr lead to slower convergence (w-disc slowly descend to min). 
         end_lr = 1e-6
         gen_lr = 1e-5
-        disc_lr = 1e-3
+        disc_lr = 1e-4
         max_epochs = 100
 
-        # gen_lr = keras.optimizers.schedules.PolynomialDecay(gen_lr, max_epochs, end_lr, power=4)
-        # disc_lr = keras.optimizers.schedules.PolynomialDecay(disc_lr, max_epochs, end_lr, power=1.0)
+        gen_lr = keras.optimizers.schedules.PolynomialDecay(gen_lr, max_epochs, end_lr, power=4)
+        disc_lr = keras.optimizers.schedules.PolynomialDecay(disc_lr, max_epochs, end_lr, power=1.0)
 
-        gen_lr = lr
-        disc_lr = lr
+        # gen_lr = lr
+        # disc_lr = lr
 
         self.generator_optimizer = keras.optimizers.Adam(gen_lr) # default: lr
         self.discriminator_optimizer = keras.optimizers.Adam(gen_lr) # default: lr
 
         # Build the critic
         self.discriminator = self.build_critic()
-        self.discriminator.summary()
+        self.discriminator.summary(print_fn=myprint)
 
         # Build the generator
         self.generator = self.build_generator()
-        self.generator.summary()
+        self.generator.summary(print_fn=myprint)
 
 
     def build_generator(self):
@@ -81,11 +85,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_input_dim,)),
-            layers.Dense(48), # TODO: original N_neural is 256 for all layers.
+            layers.Dense(32), # TODO: original N_neural is 256 for all layers.
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(48), # NOTE: generator too strong?
+            layers.Dense(32), # NOTE: generator too strong?
             layers.BatchNormalization(),
             
             layers.Dense(self.gen_output_dim),
@@ -98,11 +102,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_output_dim,)),
-            layers.Dense(64),
+            layers.Dense(48),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(64),
+            layers.Dense(48),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
 
