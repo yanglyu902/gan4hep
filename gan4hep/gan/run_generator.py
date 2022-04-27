@@ -173,7 +173,7 @@ if __name__=='__main__':
     add_arg = parser.add_argument
 
     add_arg("--log-dir", help='name of log folder', default=None)
-    add_arg("--ngen", default=100000, type=int, help='if not None, generate sample!')
+    add_arg("--ngen", default=1000000, type=int, help='if not None, generate sample!')
     add_arg("--elow", default='05', type=str)
     add_arg("--ehigh", default='15', type=str)
 

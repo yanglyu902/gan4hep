@@ -60,13 +60,13 @@ class CGAN():
         end_lr = 1e-6
         gen_lr = 1e-5
         disc_lr = 1e-4
-        max_epochs = 100
+        max_epochs = 50 * int(10000000/256) # FIXME: need to be changed!!! (epoch * N_event / batch_size)
 
-        gen_lr = keras.optimizers.schedules.PolynomialDecay(gen_lr, max_epochs, end_lr, power=4)
-        disc_lr = keras.optimizers.schedules.PolynomialDecay(disc_lr, max_epochs, end_lr, power=1.0)
+        # gen_lr = keras.optimizers.schedules.PolynomialDecay(gen_lr, max_epochs, end_lr, power=4)
+        # disc_lr = keras.optimizers.schedules.PolynomialDecay(disc_lr, max_epochs, end_lr, power=1.0)
 
-        # gen_lr = lr
-        # disc_lr = lr
+        gen_lr = lr
+        disc_lr = lr
 
         self.generator_optimizer = keras.optimizers.Adam(gen_lr) # default: lr
         self.discriminator_optimizer = keras.optimizers.Adam(gen_lr) # default: lr
@@ -85,11 +85,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_input_dim,)),
-            layers.Dense(32), # TODO: original N_neural is 256 for all layers.
+            layers.Dense(38), # TODO: original N_neural is 256 for all layers.
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(32), # NOTE: generator too strong?
+            layers.Dense(38), # NOTE: generator too strong?
             layers.BatchNormalization(),
             
             layers.Dense(self.gen_output_dim),
@@ -102,11 +102,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_output_dim,)),
-            layers.Dense(48),
+            layers.Dense(64),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(48),
+            layers.Dense(64),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
 
@@ -296,9 +296,6 @@ class CGAN():
                 #     if i_disc_only == num_disc_only_epochs:
                 #         do_disc_only = False
                 #         i_disc_only = 0
-
-
-
 
 
         tmp_res = "Best Model in {} Epoch with a Wasserstein distance {:.4f}".format(best_epoch, best_wdis)
