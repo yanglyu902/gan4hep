@@ -183,7 +183,7 @@ if __name__=='__main__':
     FIG_DIR = LOG_DIR + args.log_dir
     PionMass = 139.570 # MeV
 
-    # gen_orig = generate(args.log_dir, args.ngen, args.elow, args.ehigh)
-    # compare(gen_orig, args.log_dir, args.elow, args.ehigh)
+    gen_orig = generate(args.log_dir, args.ngen, args.elow, args.ehigh)
+    compare(gen_orig, args.log_dir, args.elow, args.ehigh)
 
     generate_and_compare_slices(args.log_dir, args.ngen)

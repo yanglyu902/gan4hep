@@ -30,7 +30,7 @@ def read_geant4(filename, log_dir):
     PionMass = 139.570 # MeV
 
     filename = "/global/homes/y/yanglyu/phys_290/MCGenerators/G4/HadronicInteractions/build/" + filename + '.csv'
-    df = pd.read_csv(filename, sep=' ', usecols=[0,1,2,3,4,5], header=None) # particle, 4 vector, and num_secondary
+    df = pd.read_csv(filename, sep=' ', usecols=[0,1,2,3,4,5], header=None) # projectile, 4 vector, num_secondary, mateiral
     data = df.to_numpy().astype(np.float32)
 
     curr_material = data[:,0]

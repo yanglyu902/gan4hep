@@ -14,7 +14,6 @@ logging.info("found {} GPUs".format(len(gpus)))
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
-
 from tensorflow import keras
 from tensorflow.keras import layers
 
@@ -85,11 +84,16 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_input_dim,)),
-            layers.Dense(38), # TODO: original N_neural is 256 for all layers.
+
+            layers.Dense(16),
+            layers.BatchNormalization(),
+            layers.LeakyReLU(),
+
+            layers.Dense(32), # TODO: original N_neural is 256 for all layers.
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
-            layers.Dense(38), # NOTE: generator too strong?
+            layers.Dense(32), # NOTE: generator too strong?
             layers.BatchNormalization(),
             
             layers.Dense(self.gen_output_dim),
@@ -102,6 +106,11 @@ class CGAN():
 
         model = keras.Sequential([
             keras.Input(shape=(gen_output_dim,)),
+            
+            layers.Dense(10),
+            layers.BatchNormalization(),
+            layers.LeakyReLU(),
+            
             layers.Dense(64),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
