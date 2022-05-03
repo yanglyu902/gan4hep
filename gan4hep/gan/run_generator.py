@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import pandas as pd
 
+import matplotlib
+matplotlib.style.use('paper.mplstyle')
+
 LOG_DIR = '/global/homes/y/yanglyu/phys_290/gan4hep/gan4hep/logs/'
 
 
@@ -29,7 +32,7 @@ def str_to_float(x):
         return float(x[1]) / 10
     return x
 
-def create_X(ngen, elow, ehigh):
+def create_X(ngen, elow, ehigh, material):
 
     dim_cond = 4 # particle info (KE, p1, p2, p3)
     dim_material = 2 # Fe, Cu
@@ -65,7 +68,17 @@ def create_X(ngen, elow, ehigh):
     """ 2. generate material """
 
     x_material = np.zeros((ngen, dim_material))
-    x_material[:,0] = 1 # pion
+
+    if material == 'Fe':
+        x_material[:,0] = 1
+    if material == 'Cu':
+        x_material[:,1] = 1
+    if material == 'FeCu':
+        a = np.random.rand(ngen)
+        a = (a < 0.5).astype(int)
+        b = 1 - a
+        x_material[:,0] = a
+        x_material[:,1] = b
 
     """ 3. generate noise """
 
@@ -78,13 +91,13 @@ def create_X(ngen, elow, ehigh):
     return X_gen
 
 
-def generate(model_name=None, ngen=100, elow=None, ehigh=None):
+def generate(model_name=None, ngen=100, elow=None, ehigh=None, material='Fe'):
 
     # NOTE: the full GAN input should be [4_vector, material, random noise]
 
     model = tf.keras.models.load_model(GEN_DIR)
 
-    X_gen = create_X(ngen, elow, ehigh)
+    X_gen = create_X(ngen, elow, ehigh, material=material)
 
     print('Generated input shape:', X_gen.shape)
     print('Example of generated features:')
@@ -97,14 +110,14 @@ def generate(model_name=None, ngen=100, elow=None, ehigh=None):
     return gen_orig
 
 
-def generate_and_compare_slices(model_name=None, ngen=100000):
+def generate_and_compare_slices(model_name=None, ngen=100000, material='Fe'):
 
     model = tf.keras.models.load_model(GEN_DIR)
     y_orig = np.loadtxt(LOG_DIR + model_name + '/y_orig.csv')
 
     for KE_curr in ['01', '05', '1', '5', '10', '15', '20', '30']: # GeV
 
-        X_gen = create_X(ngen, KE_curr, KE_curr)
+        X_gen = create_X(ngen, KE_curr, KE_curr, material=material)
         print('Example of generated features:')
         print(X_gen[:5])
 
@@ -113,24 +126,24 @@ def generate_and_compare_slices(model_name=None, ngen=100000):
 
         " --- make plot --- "
 
-        y_truth = np.loadtxt('/global/homes/y/yanglyu/phys_290/MCGenerators/G4/HadronicInteractions/build/pion_' + KE_curr + 'GeV_Fe_1M.csv', usecols=(5))
+        y_truth = np.loadtxt('/global/homes/y/yanglyu/phys_290/MCGenerators/G4/HadronicInteractions/build/pion_' + KE_curr + 'GeV_' + material + '_1M.csv', usecols=(6))
 
-        plt.figure()
+        plt.figure(figsize=(10,8))
         bins = np.arange(0,76,1)
 
-        plt.hist(y_truth, density=True, histtype='step', bins=bins, label='truth', zorder=1)
+        plt.hist(y_truth, density=True, histtype='step', bins=bins, label='Truth', zorder=1)
         plt.hist(gen_orig, density=True, histtype='step', bins=bins, label='Generated', zorder=1)
 
         plt.xlabel('Number of secondary particles')
-        plt.title(model_name + ': ' + KE_curr + ' GeV')
+        plt.title('Pion -> ' + material + '; ' + KE_curr + ' GeV')
         plt.legend()
 
-        plt.savefig(FIG_DIR + '/comparison_' + str(KE_curr) + 'GeV.png', dpi=150)
+        plt.savefig(FIG_DIR + '/comparison_' + material + '_' + str(KE_curr) + 'GeV.png', dpi=150)
         print(f'Comparison plot saved to {FIG_DIR}')
 
 
 
-def compare(gen_orig, model_name=None, elow=None, ehigh=None):
+def compare_total(gen_orig, model_name=None, elow=None, ehigh=None, material='Fe'):
     
     """ N secondary space """
 
@@ -141,7 +154,7 @@ def compare(gen_orig, model_name=None, elow=None, ehigh=None):
 
     """ make plot """
     
-    plt.figure()
+    plt.figure(figsize=(10,8))
     bins = np.arange(0,76,1)
 
     h_orig,b = np.histogram(y_orig, bins=bins)
@@ -152,13 +165,13 @@ def compare(gen_orig, model_name=None, elow=None, ehigh=None):
     sig_y = h_orig/np.sum(h_orig) * np.sqrt(1/h_orig + 1/np.sum(h_orig))
     plt.errorbar(b,h, yerr=sig_y, color='black', fmt='.', markersize=3, capsize=2, label='Truth, all')
 
-    plt.hist(y_train_orig, density=True, histtype='step', bins=bins, label='training truth', alpha=0.5,lw=2)
-    plt.hist(y_test_orig, density=True, histtype='step', bins=bins, label='testing truth', alpha=0.5,lw=2)
+    plt.hist(y_train_orig, density=True, histtype='step', bins=bins, label='Training truth', alpha=0.5,lw=2)
+    plt.hist(y_test_orig, density=True, histtype='step', bins=bins, label='Testing truth', alpha=0.5,lw=2)
     plt.hist(gen_orig, density=True, histtype='step', bins=bins, label='Generated', lw=2)
 
     plt.xlabel('Number of secondary particles')
     plt.ylabel('Fraction of events')
-    plt.title(model_name)
+    plt.title(f'Pion -> {material}; {elow} - {ehigh} GeV; 10M events')
     plt.legend()
 
     plt.savefig(FIG_DIR + '/comparison_total.png', dpi=150)
@@ -183,7 +196,8 @@ if __name__=='__main__':
     FIG_DIR = LOG_DIR + args.log_dir
     PionMass = 139.570 # MeV
 
-    gen_orig = generate(args.log_dir, args.ngen, args.elow, args.ehigh)
-    compare(gen_orig, args.log_dir, args.elow, args.ehigh)
+    gen_orig = generate(args.log_dir, args.ngen, args.elow, args.ehigh, 'FeCu')
+    compare_total(gen_orig, args.log_dir, args.elow, args.ehigh, 'Fe+Cu')
 
-    generate_and_compare_slices(args.log_dir, args.ngen)
+    generate_and_compare_slices(args.log_dir, args.ngen, 'Fe')
+    generate_and_compare_slices(args.log_dir, args.ngen, 'Cu')

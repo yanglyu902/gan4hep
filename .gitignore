@@ -1,6 +1,8 @@
 */logs
 *.pb
 *.index
+*/log
+gan4hep/nf/logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

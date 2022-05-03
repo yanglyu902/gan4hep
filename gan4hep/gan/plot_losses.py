@@ -9,6 +9,9 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import matplotlib
+matplotlib.style.use('paper.mplstyle')
+
 
 LOG_DIR = '/global/homes/y/yanglyu/phys_290/gan4hep/gan4hep/logs/'
 
@@ -18,7 +21,7 @@ def plot_losses(model_name=None):
 
     epoch, loss_D, loss_G, tot_wdis, best_wdis, best_epoch = np.loadtxt(LOSS_DIR, delimiter=',', unpack=True)
 
-    plt.figure()
+    plt.figure(figsize=(10,8))
     plt.plot(epoch, loss_G, '.-', label='Generator loss')
     plt.plot(epoch, 0.5 * loss_D, '.-', label='Averaged Discriminator loss')
     plt.legend()
@@ -26,7 +29,7 @@ def plot_losses(model_name=None):
     plt.ylabel('Loss')
     plt.savefig(FIG_DIR + '/losses.png', dpi=150)
 
-    plt.figure()
+    plt.figure(figsize=(10,8))
     plt.plot(epoch, tot_wdis, '.-', label='Total Wasserstein distance')
     plt.plot(epoch, best_wdis, '.-', label='Best Wasserstein distance: ' + str(np.round(best_wdis[-1], 5)))
     plt.legend()

@@ -19,8 +19,8 @@ from tensorflow.keras import layers
 
 import tqdm
 
-
-cross_entropy = keras.losses.BinaryCrossentropy(from_logits=False)
+# -y log p + (1-y) log(1-p), p is output from model
+cross_entropy = keras.losses.BinaryCrossentropy(from_logits=False) 
 def discriminator_loss(real_output, fake_output):
     real_loss = cross_entropy(tf.ones_like(real_output), real_output)
     fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
@@ -85,7 +85,7 @@ class CGAN():
         model = keras.Sequential([
             keras.Input(shape=(gen_input_dim,)),
 
-            layers.Dense(16),
+            layers.Dense(8),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
 
@@ -107,7 +107,7 @@ class CGAN():
         model = keras.Sequential([
             keras.Input(shape=(gen_output_dim,)),
             
-            layers.Dense(10),
+            layers.Dense(8),
             layers.BatchNormalization(),
             layers.LeakyReLU(),
             
@@ -170,7 +170,7 @@ class CGAN():
                 gen_out_4vec = tf.concat([cond_in, gen_out_4vec], axis=-1)
                 truth_4vec = tf.concat([cond_in, truth_4vec], axis=-1)
 
-                # apply discriminator
+                # apply discriminator: output "trueness" score. 
                 real_output = self.discriminator(truth_4vec, training=True)
                 fake_output = self.discriminator(gen_out_4vec, training=True)
 
@@ -322,13 +322,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train The GAN')
     add_arg = parser.add_argument
     add_arg("filename", help='input filename (csv file)', default=None)
-    add_arg("--epochs", help='number of maximum epochs', default=100, type=int) # TODO: before was 100
+    add_arg("--epochs", help='number of maximum epochs', default=150, type=int) # TODO: before was 100
     add_arg("--log-dir", help='log directory') # TODO: must specify; use naming similar to the filename
 
     add_arg("--num-test-evts", help='number of testing events', default=10000, type=int)
     add_arg("-v", '--verbose', help='tf logging verbosity', default='INFO',
         choices=['WARN', 'INFO', "ERROR", "FATAL", 'DEBUG'])
-    add_arg("--batch-size", help='Batch size', type=int, default=128)
+    add_arg("--batch-size", help='Batch size', type=int, default=256)
     args = parser.parse_args()
 
     logging.set_verbosity(args.verbose)

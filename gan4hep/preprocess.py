@@ -30,12 +30,15 @@ def read_geant4(filename, log_dir):
     PionMass = 139.570 # MeV
 
     filename = "/global/homes/y/yanglyu/phys_290/MCGenerators/G4/HadronicInteractions/build/" + filename + '.csv'
-    df = pd.read_csv(filename, sep=' ', usecols=[0,1,2,3,4,5], header=None) # projectile, 4 vector, num_secondary, mateiral
+    df = pd.read_csv(filename, sep=' ', usecols=[0,1,2,3,4,5,6], header=None) # projectile, 4 vector, num_secondary, mateiral
     data = df.to_numpy().astype(np.float32)
 
-    curr_material = data[:,0]
-    X = data[:, 1:-1]
+    # Example line in csv: -211 30000 18083.5 18083.5 15948.2 56 17
+
+    curr_particle = data[:,0]
+    X = data[:, 1:5] # 4 vector
     y = data[:, -1]
+    curr_material = data[:, -2]
     y_orig = y.copy()
 
     # normalize and standardize: scale features to [0, 1], and scale labels to [-1, 1]
@@ -52,10 +55,10 @@ def read_geant4(filename, log_dir):
     X_train, y_train = X[train_index], y[train_index, None]
     X_test, y_test = X[test_index], y[test_index, None]
 
-    # one-hot encoding material info: 2 materials for now. 
+    # one-hot encoding material info: 2 materials (Fe, Cu) for now. 
     material = np.zeros((data.shape[0], 2), dtype=np.float32)
-    material[:,0] = (curr_material == -211).astype(np.float32)
-    material[:,1] = (curr_material == -321).astype(np.float32)
+    material[:,0] = (curr_material == 56).astype(np.float32)
+    material[:,1] = (curr_material == 64).astype(np.float32)
 
     X_train = np.concatenate((X_train, material[train_index]), axis=1)
     X_test = np.concatenate((X_test, material[test_index]), axis=1)
