@@ -30,6 +30,16 @@ def plot_losses(model_name=None):
     plt.savefig(FIG_DIR + '/losses.png', dpi=150)
 
     plt.figure(figsize=(10,8))
+    plt.plot(epoch, loss_G, '.-', label='Generator loss')
+    plt.plot(epoch, 0.5 * loss_D, '.-', label='Averaged Discriminator loss')
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    delta = 4*1e-3
+    plt.ylim(0.693-delta, 0.693+delta)
+    plt.savefig(FIG_DIR + '/losses_zoomin.png', dpi=150)
+
+    plt.figure(figsize=(10,8))
     plt.plot(epoch, tot_wdis, '.-', label='Total Wasserstein distance')
     plt.plot(epoch, best_wdis, '.-', label='Best Wasserstein distance: ' + str(np.round(best_wdis[-1], 5)))
     plt.legend()

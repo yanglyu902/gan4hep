@@ -85,9 +85,9 @@ class CGAN():
         model = keras.Sequential([
             keras.Input(shape=(gen_input_dim,)),
 
-            layers.Dense(8),
-            layers.BatchNormalization(),
-            layers.LeakyReLU(),
+            # layers.Dense(8),
+            # layers.BatchNormalization(),
+            # layers.LeakyReLU(),
 
             layers.Dense(32), # TODO: original N_neural is 256 for all layers.
             layers.BatchNormalization(),
@@ -107,9 +107,9 @@ class CGAN():
         model = keras.Sequential([
             keras.Input(shape=(gen_output_dim,)),
             
-            layers.Dense(8),
-            layers.BatchNormalization(),
-            layers.LeakyReLU(),
+            # layers.Dense(8),
+            # layers.BatchNormalization(),
+            # layers.LeakyReLU(),
             
             layers.Dense(64),
             layers.BatchNormalization(),

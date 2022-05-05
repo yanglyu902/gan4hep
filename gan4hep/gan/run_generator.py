@@ -9,6 +9,7 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import pandas as pd
+from scipy import stats 
 
 import matplotlib
 matplotlib.style.use('paper.mplstyle')
@@ -125,7 +126,6 @@ def generate_and_compare_slices(model_name=None, ngen=100000, material='Fe'):
         gen_orig = inverse_transform(gen, y_orig)
 
         " --- make plot --- "
-
         y_truth = np.loadtxt('/global/homes/y/yanglyu/phys_290/MCGenerators/G4/HadronicInteractions/build/pion_' + KE_curr + 'GeV_' + material + '_1M.csv', usecols=(6))
 
         plt.figure(figsize=(10,8))
@@ -134,8 +134,10 @@ def generate_and_compare_slices(model_name=None, ngen=100000, material='Fe'):
         plt.hist(y_truth, density=True, histtype='step', bins=bins, label='Truth', zorder=1)
         plt.hist(gen_orig, density=True, histtype='step', bins=bins, label='Generated', zorder=1)
 
+        dis = stats.wasserstein_distance(gen_orig, y_truth)
+
         plt.xlabel('Number of secondary particles')
-        plt.title('Pion -> ' + material + '; ' + KE_curr + ' GeV')
+        plt.title(f'Pion -> {material}; {KE_curr} GeV; wdis={np.round(dis,3)}')
         plt.legend()
 
         plt.savefig(FIG_DIR + '/comparison_' + material + '_' + str(KE_curr) + 'GeV.png', dpi=150)
@@ -163,7 +165,7 @@ def compare_total(gen_orig, model_name=None, elow=None, ehigh=None, material='Fe
     # print(h)
     b = (b[1:] + b[:-1])/2
     sig_y = h_orig/np.sum(h_orig) * np.sqrt(1/h_orig + 1/np.sum(h_orig))
-    plt.errorbar(b,h, yerr=sig_y, color='black', fmt='.', markersize=3, capsize=2, label='Truth, all')
+    plt.errorbar(b,h, yerr=sig_y, color='black', fmt='d', markersize=3, capsize=2, label='Truth, all')
 
     plt.hist(y_train_orig, density=True, histtype='step', bins=bins, label='Training truth', alpha=0.5,lw=2)
     plt.hist(y_test_orig, density=True, histtype='step', bins=bins, label='Testing truth', alpha=0.5,lw=2)
@@ -196,8 +198,8 @@ if __name__=='__main__':
     FIG_DIR = LOG_DIR + args.log_dir
     PionMass = 139.570 # MeV
 
-    gen_orig = generate(args.log_dir, args.ngen, args.elow, args.ehigh, 'FeCu')
-    compare_total(gen_orig, args.log_dir, args.elow, args.ehigh, 'Fe+Cu')
+    gen_orig = generate(args.log_dir, args.ngen, args.elow, args.ehigh, 'Fe')
+    compare_total(gen_orig, args.log_dir, args.elow, args.ehigh, 'Fe')
 
-    generate_and_compare_slices(args.log_dir, args.ngen, 'Fe')
-    generate_and_compare_slices(args.log_dir, args.ngen, 'Cu')
+    # generate_and_compare_slices(args.log_dir, args.ngen, 'Fe')
+    # generate_and_compare_slices(args.log_dir, args.ngen, 'Cu')
